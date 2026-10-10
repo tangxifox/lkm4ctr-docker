@@ -27,8 +27,12 @@
 
 ## 许可与致谢
 
-- lkm4ctr：<https://github.com/cyanmint/lkm4ctr>
-- fuse-overlayfs（Apache-2.0）：<https://github.com/containers/fuse-overlayfs>
-- Docker 静态二进制：<https://download.docker.com/linux/static/stable/aarch64/>
+**本项目不单独声明许可；内核模块 lkm4ctr 的许可以上游仓库为准。**
 
-本仓库只包含 Magisk 模块文件、装配脚本与补丁脚本。
+- **lkm4ctr**（内核模块）：<https://github.com/cyanmint/lkm4ctr>
+  上游未附 LICENSE 文件（默认保留所有权利），使用与分发请先确认上游声明。
+- **fuse-overlayfs**（存储驱动）：Apache-2.0 · <https://github.com/containers/fuse-overlayfs>
+- **Docker 静态二进制**：Apache-2.0 · <https://download.docker.com/linux/static/stable/aarch64/>
+
+本仓库只包含 Magisk 模块文件、装配脚本与补丁脚本；内核模块产物（ko）不随仓库分发，
+由 `build_lkm4ctr_docker_module.sh` 在构建时从上游 Release 获取。
