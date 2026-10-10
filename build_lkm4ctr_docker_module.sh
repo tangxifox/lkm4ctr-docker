@@ -140,10 +140,10 @@ EOF
 cat > "$BUILD/$MODID/module.prop" <<EOF
 id=${MODID}
 name=Docker in /system (lkm4ctr)
-version=v2.0
-versionCode=2
-author=generated
-description=docker/dockerd/containerd/containerd-shim-runc-v2/runc/ctr/fuse-overlayfs 静态二进制挂进 /system/bin，已内置 /run 路径补丁；配套 lkm4ctr 内核模块，开机按 insmod -> containerd -> dockerd 顺序拉起。数据目录 /data/docker。
+version=v1.0.0
+versionCode=1
+author=tangxi
+description=docker内核ko加载版
 EOF
 
 

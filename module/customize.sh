@@ -69,5 +69,4 @@ if [ -n "$RUN_KMI" ]; then
 fi
 
 ui_print "- 安装完成，重启生效"
-ui_print "- 开机自动加载内核模块: 把 LOAD_KO 改成 1"
 ui_print " "

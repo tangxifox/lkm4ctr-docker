@@ -14,20 +14,6 @@
 **做不到**：`docker -p` 端口映射、`--memory` / `--cpus` 等资源限制（Network 与 cgroup 是记账式的），
 容器里也跑不了 systemd。所以容器一律用 `--network=host`。
 
-## 怎么用
-
-```sh
-# 1) 生成模块（Termux 里）
-pkg install python zip curl -y
-bash build_lkm4ctr_docker_module.sh          # 产物 ~/lkm4ctr-docker.zip
-
-# 2) Magisk App -> 模块 -> 从本地安装 -> 重启
-
-# 3) 直接用
-su
-docker run -d --name web --network=host nginx:alpine
-docker info | grep -i "storage driver"       # fuse-overlayfs
-```
 
 配置与开关在 `/data/adb/lkm4ctr-docker/docker.conf`，日志在同目录下的 `service.log`、
 `containerd.log`、`dockerd.log`。
