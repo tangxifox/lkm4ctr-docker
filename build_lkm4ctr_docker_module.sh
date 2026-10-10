@@ -28,6 +28,7 @@ command -v python >/dev/null || { echo "缺少 python：pkg install python"; exi
 # ---------- KMI 识别 + 自动下载内核模块 ----------
 PROXY="${PROXY:-}"
 GH_PROXY="${GH_PROXY:-https://gh-proxy.com}"
+BUNDLE_KO="${BUNDLE_KO:-1}"   # 0 = 不把 ko 打进包，改由安装时下载
 REPO="cyanmint/lkm4ctr"
 api() { curl -fsSL ${PROXY:+-x "$PROXY"} --max-time 60 "$@"; }
 
@@ -50,7 +51,7 @@ for c in "./${KO_NAME}" "$HOME/${KO_NAME}" "$HOME/downloads/${KO_NAME}" \
 done
 
 TAG=""
-if [ -z "$KO_SRC" ]; then
+if [ -z "$KO_SRC" ] && [ "$BUNDLE_KO" = "1" ]; then
   echo "==> 3. 自动下载 $KO_NAME"
   TAG="$(api "${GH_PROXY}/https://api.github.com/repos/${REPO}/releases/latest" 2>/dev/null \
          | grep -m1 '"tag_name"' | sed -E 's/.*"tag_name" *: *"([^"]+)".*/\1/')"
@@ -97,10 +98,10 @@ cp "$BIN/runc"                       "$BUILD/$MODID/system/bin/runc"
 cp "$BIN/docker-init"                "$BUILD/$MODID/system/bin/docker-init"
 cp "$BIN/docker-proxy"               "$BUILD/$MODID/system/bin/docker-proxy"
 cp "$BIN/fuse-overlayfs"        "$BUILD/$MODID/system/bin/fuse-overlayfs"
-[ -n "$KO_SRC" ] && cp "$KO_SRC" "$BUILD/$MODID/lkm4ctr/$KO_NAME"
-[ -n "$CHECKER_SRC" ] && cp "$CHECKER_SRC" "$BUILD/$MODID/lkm4ctr/lkm4ctr_checker-arm64"
+[ "$BUNDLE_KO" = "1" ] && [ -n "$KO_SRC" ] && cp "$KO_SRC" "$BUILD/$MODID/lkm4ctr/$KO_NAME"
+[ "$BUNDLE_KO" = "1" ] && [ -n "$CHECKER_SRC" ] && cp "$CHECKER_SRC" "$BUILD/$MODID/lkm4ctr/lkm4ctr_checker-arm64"
 chmod 0755 "$BUILD/$MODID/system/bin/"*
-[ -n "$CHECKER_SRC" ] && chmod 0755 "$BUILD/$MODID/lkm4ctr/lkm4ctr_checker-arm64"
+[ "$BUNDLE_KO" = "1" ] && [ -n "$CHECKER_SRC" ] && chmod 0755 "$BUILD/$MODID/lkm4ctr/lkm4ctr_checker-arm64"
 
 echo "==> 5. 给模块内的副本打 /run 路径补丁（不动 Termux 里的原件）"
 MODBIN="$BUILD/$MODID/system/bin"
