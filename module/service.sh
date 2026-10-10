@@ -1,14 +1,10 @@
 #!/system/bin/sh
 MODDIR=${0%/*}
-LOG="$MODDIR/log"
-
+until [ "$(/system/bin/getprop sys.boot_completed)" = "1" ]; do sleep 2; done
 # 脚本最前面加载内核模块（绝对路径；已加载则跳过）
-[ "$(grep -c '^lkm4ctr ' /proc/modules)" = "0" ] && insmod /data/adb/modules/lkm4ctr-docker/lkm4ctr/lkm4ctr-android14-6.1-arm64.ko 2>>"$LOG"
+[ "$(grep -c '^lkm4ctr ' /proc/modules)" = "0" ] && insmod /data/adb/modules/lkm4ctr-docker/lkm4ctr/lkm4ctr-android14-6.1-arm64.ko
 
-# 其余丢后台：service.sh 立刻返回，避免和 sys.boot_completed 互相等死
-(
-  until [ "$(/system/bin/getprop sys.boot_completed)" = "1" ]; do sleep 2; done
-
+( 
   # 目录 + CA bundle
   mkdir -p /data/docker/data /data/docker/run/docker /data/container /data/docker/ca
   cat /system/etc/security/cacerts/* /data/misc/user/0/cacerts-added/* 2>/dev/null > /data/docker/ca/ca-certificates.crt
