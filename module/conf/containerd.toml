@@ -1,0 +1,6 @@
+version = 3
+root  = "/data/docker/containerd/root"
+state = "/data/docker/containerd/state"
+
+[grpc]
+  address = "/data/docker/containerd/containerd.sock"
