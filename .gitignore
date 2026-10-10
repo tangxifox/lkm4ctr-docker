@@ -1,7 +1,4 @@
-# 大体积产物不进 git，走 Release 附件
-dist/*.zip
-dist/*.patched
-dist/*.tar.gz
-*.bak
 *.orig
+*.bak
 __pycache__/
+*.zip

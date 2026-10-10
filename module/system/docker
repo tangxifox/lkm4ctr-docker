@@ -1,5 +1,0 @@
-#!/system/bin/sh
-# 官方 docker CLI 入口包装：自动指向本模块的 socket
-: "${DOCKER_HOST:=unix:///data/docker/run/docker.sock}"
-export DOCKER_HOST
-exec /system/bin/docker-real "$@"
