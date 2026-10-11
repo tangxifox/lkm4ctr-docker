@@ -4,7 +4,7 @@
   "exec-root": "/data/docker/run/docker",
   "pidfile": "/data/docker/run/docker.pid",
   "hosts": ["unix:///data/docker/run/docker.sock"],
-  "containerd": "/data/docker/containerd/containerd.sock",
+  "containerd": "/data/docker/run/containerd/containerd.sock",
 
   "bridge": "none",
   "iptables": false,

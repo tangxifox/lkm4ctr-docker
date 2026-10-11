@@ -1,6 +1,6 @@
 version = 3
 root  = "/data/docker/containerd/root"
-state = "/data/docker/containerd/state"
+state = "/data/docker/run/containerd"
 
 [grpc]
-  address = "/data/docker/containerd/containerd.sock"
+  address = "/data/docker/run/containerd/containerd.sock"
