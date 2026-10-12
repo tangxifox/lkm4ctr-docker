@@ -16,6 +16,16 @@ ui_print "- 内核: $(uname -r)"
 
 set_perm_recursive "$MODPATH/system/bin" 0 0 0755 0755
 set_perm_recursive "$MODPATH/conf" 0 0 0755 0644
+mkdir -p /data/docker/conf/containerd
+if [ ! -f /data/docker/conf/daemon.json ]; then
+  cp -f "$MODPATH/conf/daemon.json" /data/docker/conf/daemon.json
+  set_perm /data/docker/conf/daemon.json 0 0 0644
+fi
+if [ ! -f /data/docker/conf/containerd/config.toml ]; then
+  cp -f "$MODPATH/conf/containerd.toml" /data/docker/conf/containerd/config.toml
+  set_perm /data/docker/conf/containerd/config.toml 0 0 0644
+fi
+
 set_perm_recursive "$MODPATH/lkm4ctr" 0 0 0755 0644
 set_perm "$MODPATH/post-fs-data.sh" 0 0 0755
 set_perm "$MODPATH/service.sh"      0 0 0755

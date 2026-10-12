@@ -1,5 +1,4 @@
-MODPATH=${0%/*}
-CONF=$MODPATH/conf/docker.conf
+CONF=/data/adb/modules/lkm4ctr-docker/conf/docker.conf
 REMOVE_DATA_ON_UNINSTALL=0
 [ -f "$CONF" ] && . "$CONF"
 pkill -f dockerd 2>/dev/null
