@@ -165,7 +165,9 @@ export PATH=/system/bin:/system/xbin:/data/adb/magisk:$PATH
 if [ "${LOAD_KO:-1}" = "1" ] && [ "$(grep -c '^lkm4ctr ' /proc/modules)" = "0" ]; then
   KMITAG=$(uname -r | grep -oE 'android[0-9]+')
   KMAJ=$(uname -r | sed -nE 's/^([0-9]+\.[0-9]+)\..*/\1/p')
-  [ -f /data/adb/modules/lkm4ctr-docker/lkm4ctr/lkm4ctr-${KMITAG}-${KMAJ}-arm64.ko ] && insmod /data/adb/modules/lkm4ctr-docker/lkm4ctr/lkm4ctr-${KMITAG}-${KMAJ}-arm64.ko
+  if [ -f /data/adb/modules/lkm4ctr-docker/lkm4ctr/lkm4ctr-${KMITAG}-${KMAJ}-arm64.ko ]; then
+    insmod /data/adb/modules/lkm4ctr-docker/lkm4ctr/lkm4ctr-${KMITAG}-${KMAJ}-arm64.ko
+  fi
 fi
 
 [ "${START_DOCKER:-1}" = "1" ] || exit 0
@@ -176,7 +178,7 @@ if [ -n "$PROXY" ]; then export HTTP_PROXY="$PROXY"; export HTTPS_PROXY="$PROXY"
 
   mkdir -p /data/docker/data /data/docker/run/docker /data/docker/run/containerd /data/docker/conf/containerd /data/docker/plugin /data/docker/conf/ca
   cat /system/etc/security/cacerts/* /data/misc/user/0/cacerts-added/* 2>/dev/null > /data/docker/conf/ca/ca-certificates.crt
-  export SSL_CERT_FILE=/data/docker/conf/ca/ca-certificates.crt
+  [ -s /data/docker/conf/ca/ca-certificates.crt ] && export SSL_CERT_FILE=/data/docker/conf/ca/ca-certificates.crt
 
   rm -f /data/docker/run/containerd/containerd.sock /data/docker/run/docker.pid
   containerd > /data/adb/modules/lkm4ctr-docker/containerd.log 2>&1 &
@@ -196,8 +198,9 @@ REMOVE_DATA_ON_UNINSTALL=0
 [ -f "$CONF" ] && . "$CONF"
 pkill -f dockerd 2>/dev/null
 pkill -f containerd-shim-runc-v2 2>/dev/null
-pkill -f 'containerd --config' 2>/dev/null
+pkill -x containerd 2>/dev/null
 sleep 1
+[ "$REMOVE_DATA_ON_UNINSTALL" = "1" ] && rm -rf /data/docker
 exit 0
 EOF
 
@@ -205,7 +208,7 @@ cat > "$BUILD/$MODID/conf/docker.conf" <<EOF
 # 开机自动加载 lkm4ctr 内核模块：1=开（默认）0=关
 # 模块自带与内核匹配的 ko；insmod 失败只记日志，不阻塞开机
 LOAD_KO=1
-# 找不到对应 KMI 的 ko 时自动去 GitHub 下载（需要 curl）
+# 安装时若包内没有对应 KMI 的 ko，则自动去 GitHub 下载（需要 curl）
 AUTO_DOWNLOAD_KO=1
 KO_REPO=cyanmint/lkm4ctr
 # 锁定版本号；留空 = 跟随最新 Release（例：4.0.3）
@@ -218,8 +221,6 @@ GH_PROXY=https://gh-proxy.com
 START_DOCKER=1
 # dockerd 出网代理，留空则直连（例：http://172.16.0.254:8000）
 PROXY=${PROXY_DEFAULT}
-# 内核模块不写死文件名：运行时用 uname -r 识别 KMI，
-# 自动拼出 lkm4ctr-<KMI>-arm64.ko，找不到就去 Release 下载同名文件
 # 卸载模块时是否连 /data/docker 一起删
 REMOVE_DATA_ON_UNINSTALL=0
 EOF
@@ -310,19 +311,15 @@ set_perm "$MODPATH/uninstall.sh"    0 0 0755
 mkdir -p $MODPATH/lkm4ctr /data/docker/containerd/root /data/docker/run/containerd \
          /data/docker/run/docker /data/docker/plugin
 
-if [ ! -f/config.toml ]; then
-  cp -f "$MODPATH/conf/containerd.toml"/config.toml
-  ui_print "- 已生成 containerd 配置"
-fi
 
-if [ -n "$RUN_KMI" ]; then
+[ -f "$MODPATH/conf/docker.conf" ] && . "$MODPATH/conf/docker.conf"
+if [ -n "$RUN_KMI" ] && [ "${AUTO_DOWNLOAD_KO:-1}" = "1" ]; then
   NAME="lkm4ctr-${RUN_KMI}-arm64.ko"
   if [ -f "$MODPATH/lkm4ctr/$NAME" ]; then
     ui_print "- 内核模块: 已包含 $NAME"
   else
     ui_print "- 内核模块: 下载 $NAME"
     KO_REPO=cyanmint/lkm4ctr; KO_TAG=""; KO_PROXY=""; GH_PROXY="https://gh-proxy.com"
-    [ -f $MODPATH/conf/docker.conf ] && . $MODPATH/conf/docker.conf
     if command -v curl >/dev/null 2>&1; then
       PX=""
       [ -n "$KO_PROXY" ] && PX="-x $KO_PROXY"

@@ -34,19 +34,15 @@ set_perm "$MODPATH/uninstall.sh"    0 0 0755
 mkdir -p $MODPATH/lkm4ctr /data/docker/containerd/root /data/docker/run/containerd \
          /data/docker/run/docker /data/docker/plugin
 
-if [ ! -f/config.toml ]; then
-  cp -f "$MODPATH/conf/containerd.toml"/config.toml
-  ui_print "- 已生成 containerd 配置"
-fi
 
-if [ -n "$RUN_KMI" ]; then
+[ -f "$MODPATH/conf/docker.conf" ] && . "$MODPATH/conf/docker.conf"
+if [ -n "$RUN_KMI" ] && [ "${AUTO_DOWNLOAD_KO:-1}" = "1" ]; then
   NAME="lkm4ctr-${RUN_KMI}-arm64.ko"
   if [ -f "$MODPATH/lkm4ctr/$NAME" ]; then
     ui_print "- 内核模块: 已包含 $NAME"
   else
     ui_print "- 内核模块: 下载 $NAME"
     KO_REPO=cyanmint/lkm4ctr; KO_TAG=""; KO_PROXY=""; GH_PROXY="https://gh-proxy.com"
-    [ -f $MODPATH/conf/docker.conf ] && . $MODPATH/conf/docker.conf
     if command -v curl >/dev/null 2>&1; then
       PX=""
       [ -n "$KO_PROXY" ] && PX="-x $KO_PROXY"
