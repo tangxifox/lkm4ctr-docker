@@ -165,7 +165,10 @@ CONF=/data/adb/lkm4ctr-docker/docker.conf
 [ -f "$CONF" ] && . "$CONF"
 
 if [ "${LOAD_KO:-1}" = "1" ] && [ "$(grep -c '^lkm4ctr ' /proc/modules)" = "0" ]; then
-  insmod /data/adb/lkm4ctr-docker/ko/lkm4ctr.ko
+  KMITAG=$(uname -r | grep -oE 'android[0-9]+')
+  KMAJ=$(uname -r | sed -nE 's/^([0-9]+\.[0-9]+)\..*/\1/p')
+  KO=/data/adb/lkm4ctr-docker/ko/lkm4ctr-${KMITAG}-${KMAJ}-arm64.ko
+  [ -f "$KO" ] && insmod "$KO"
 fi
 
 [ "${START_DOCKER:-1}" = "1" ] || exit 0
@@ -347,12 +350,6 @@ fi
 ui_print "- 安装完成，重启生效"
 ui_print " "
 
-KO_SRC=$(ls /data/adb/lkm4ctr-docker/ko/lkm4ctr-android*-arm64.ko 2>/dev/null | head -1)
-if [ -n "$KO_SRC" ]; then
-  cp -f "$KO_SRC" /data/adb/lkm4ctr-docker/ko/lkm4ctr.ko
-  set_perm /data/adb/lkm4ctr-docker/ko/lkm4ctr.ko 0 0 0644
-  ui_print "- 内核模块: 已就绪 lkm4ctr.ko"
-fi
 
 EOF
 

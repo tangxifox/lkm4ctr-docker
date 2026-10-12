@@ -70,10 +70,4 @@ fi
 ui_print "- 安装完成，重启生效"
 ui_print " "
 
-KO_SRC=$(ls /data/adb/lkm4ctr-docker/ko/lkm4ctr-android*-arm64.ko 2>/dev/null | head -1)
-if [ -n "$KO_SRC" ]; then
-  cp -f "$KO_SRC" /data/adb/lkm4ctr-docker/ko/lkm4ctr.ko
-  set_perm /data/adb/lkm4ctr-docker/ko/lkm4ctr.ko 0 0 0644
-  ui_print "- 内核模块: 已就绪 lkm4ctr.ko"
-fi
 
