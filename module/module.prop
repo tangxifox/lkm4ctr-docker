@@ -1,6 +1,6 @@
 id=lkm4ctr-docker
 name=Docker in /system (lkm4ctr)
-version=v1.1.0
-versionCode=2
+version=v1.1.1
+versionCode=3
 author=tangxi
 description=docker内核ko加载版

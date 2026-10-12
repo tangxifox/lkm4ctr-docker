@@ -140,8 +140,8 @@ echo "==> 6. 写入模块脚本"
 cat > "$BUILD/$MODID/module.prop" <<EOF
 id=${MODID}
 name=Docker in /system (lkm4ctr)
-version=v1.1.0
-versionCode=2
+version=v1.1.1
+versionCode=3
 author=tangxi
 description=docker内核ko加载版
 EOF

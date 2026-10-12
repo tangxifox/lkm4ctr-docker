@@ -1,0 +1,17 @@
+diff --git a/daemon/container_operations_unix.go b/daemon/container_operations_unix.go
+index cad3088d..f5b3ff73 100644
+--- a/daemon/container_operations_unix.go
++++ b/daemon/container_operations_unix.go
+@@ -240,8 +240,11 @@ func (daemon *Daemon) setupIPCDirs(ctr *container.Container) error {
+ 		ctr.ShmPath = ic.ShmPath
+ 
+ 	case ipcMode.IsHost():
+-		if _, err := os.Stat("/dev/shm"); err != nil {
+-			return errors.New("/dev/shm is not mounted, but must be for --ipc=host")
++		if st, err := os.Stat("/dev/shm"); err != nil || !st.IsDir() {
++			// no /dev/shm (e.g. Android): create it in place, /dev is usually a tmpfs
++			if mkErr := os.MkdirAll("/dev/shm", 0o1777); mkErr != nil {
++				return errors.Wrap(mkErr, "failed to create /dev/shm for --ipc=host")
++			}
+ 		}
+ 		ctr.ShmPath = "/dev/shm"
