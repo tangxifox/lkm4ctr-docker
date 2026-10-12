@@ -18,6 +18,14 @@
 配置与开关在 `/data/adb/lkm4ctr-docker/docker.conf`，日志在同目录下的 `service.log`、
 `containerd.log`、`dockerd.log`。
 
+## 路径布局（v1.1.0）
+
+全部落在 `/data/docker` 下，**不再使用 `/run` 与 `/etc`**：
+
+`conf/`（配置）· `run/`（socket / exec-root / shim socket）· `data/`（镜像数据）· `plugin/` · `certs.d/` · `containerd/root`
+
+二进制为**源码构建**（改掉源码里的默认路径常量后交叉编译），因此**不需要二进制补丁**。
+
 ## 依赖的两个上游项目
 
 - **lkm4ctr** —— 补齐容器所需的内核能力（命名空间、IPC）
