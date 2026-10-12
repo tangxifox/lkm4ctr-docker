@@ -28,7 +28,8 @@ command -v python >/dev/null || { echo "缺少 python：pkg install python"; exi
 # ---------- KMI 识别 + 自动下载内核模块 ----------
 PROXY="${PROXY:-}"
 GH_PROXY="${GH_PROXY:-https://gh-proxy.com}"
-BUNDLE_KO="${BUNDLE_KO:-1}"   # 0 = 不把 ko 打进包，改由安装时下载
+BUNDLE_KO="${BUNDLE_KO:-1}"   # 0 = 不把 ko 打进包
+PATCH_BINS="${PATCH_BINS:-0}"  # 默认跳过 /run 补丁（源码构建版自带正确路径）；=1 仅用于官方二进制（旧方案）
 REPO="cyanmint/lkm4ctr"
 api() { curl -fsSL ${PROXY:+-x "$PROXY"} --max-time 60 "$@"; }
 
@@ -103,13 +104,14 @@ cp "$BIN/fuse-overlayfs"        "$BUILD/$MODID/system/bin/fuse-overlayfs"
 chmod 0755 "$BUILD/$MODID/system/bin/"*
 [ "$BUNDLE_KO" = "1" ] && [ -n "$CHECKER_SRC" ] && chmod 0755 "$BUILD/$MODID/lkm4ctr/lkm4ctr_checker-arm64"
 
+if [ "$PATCH_BINS" = "1" ]; then
 echo "==> 5. 给模块内的副本打 /run 路径补丁（不动 Termux 里的原件）"
 MODBIN="$BUILD/$MODID/system/bin"
 python - "$MODBIN" <<'PYEOF'
 import os, sys, hashlib
 d = sys.argv[1]
 PATCHES = [(b'/run/docker/plugins', b'/data/docker/plugin'),   # 19 = 19
-           (b'/run/containerd',    b'/data/container')]         # 15 = 15
+           (b'/run/containerd',    b'/data/container')]         # 15 = 15（旧方案，仅 PATCH_BINS=1 时生效）
 targets = ['dockerd', 'containerd', 'containerd-shim-runc-v2', 'docker-real']
 for t in targets:
     p = os.path.join(d, t)
@@ -127,6 +129,9 @@ for t in targets:
     open(p, 'wb').write(data)
     print(f'    {t}: 替换 {total} 处, sha256 {hashlib.sha256(data).hexdigest()[:16]}')
 PYEOF
+else
+  echo "==> 5. 跳过 /run 二进制补丁（PATCH_BINS=0）"
+fi
 
 echo "==> 6. 写入模块脚本"
 
@@ -141,8 +146,8 @@ EOF
 cat > "$BUILD/$MODID/module.prop" <<EOF
 id=${MODID}
 name=Docker in /system (lkm4ctr)
-version=v1.0.0
-versionCode=1
+version=v1.1.0
+versionCode=2
 author=tangxi
 description=docker内核ko加载版
 EOF
@@ -152,46 +157,37 @@ EOF
 
 
 cat > "$BUILD/$MODID/post-fs-data.sh" <<'EOF'
-#!/system/bin/sh
-# 只建目录，不做任何可能阻塞开机的操作
-mkdir -p /data/docker/data /data/docker/run/docker /data/docker/plugin \
-         /data/container /data/docker/containerd/root /data/docker/containerd/state
-chmod 755 /data/docker /data/docker/run /data/docker/run/docker /data/docker/plugin /data/container 2>/dev/null
+mkdir -p /data/docker/data /data/docker/run/docker /data/docker/run/containerd \
+         /data/docker/conf/containerd /data/docker/plugin /data/docker/ca /data/docker/containerd/root
+chmod 755 /data/docker /data/docker/run /data/docker/run/docker /data/docker/plugin 2>/dev/null
 EOF
 
 cat > "$BUILD/$MODID/service.sh" <<'EOF'
 #!/system/bin/sh
 MODDIR=${0%/*}
-LOG="$MODDIR/log"
 
-# 脚本最前面加载内核模块（绝对路径；已加载则跳过）
-[ "$(grep -c '^lkm4ctr ' /proc/modules)" = "0" ] && insmod /data/adb/modules/lkm4ctr-docker/lkm4ctr/lkm4ctr-android14-6.1-arm64.ko 2>>"$LOG"
+[ "$(grep -c '^lkm4ctr ' /proc/modules)" = "0" ] && insmod /data/adb/modules/lkm4ctr-docker/lkm4ctr/lkm4ctr-android14-6.1-arm64.ko
 
-# 其余丢后台：service.sh 立刻返回，避免和 sys.boot_completed 互相等死
 (
   until [ "$(/system/bin/getprop sys.boot_completed)" = "1" ]; do sleep 2; done
 
-  # 目录 + CA bundle
-  mkdir -p /data/docker/data /data/docker/run/docker /data/container /data/docker/ca
+  mkdir -p /data/docker/data /data/docker/run/docker /data/docker/run/containerd /data/docker/conf/containerd /data/docker/plugin /data/docker/ca
   cat /system/etc/security/cacerts/* /data/misc/user/0/cacerts-added/* 2>/dev/null > /data/docker/ca/ca-certificates.crt
   export SSL_CERT_FILE=/data/docker/ca/ca-certificates.crt
 
-  # 容器运行时：先清残留 socket/pid，再依次拉起
-  rm -f /data/docker/containerd/containerd.sock /data/docker/run/docker.pid
-  containerd --config /data/docker/containerd/config.toml > "$MODDIR/containerd.log" 2>&1 &
+  rm -f /data/docker/run/containerd/containerd.sock /data/docker/run/docker.pid
+  containerd --config /data/docker/conf/containerd/config.toml > "$MODDIR/containerd.log" 2>&1 &
   i=0
-  while [ "$i" -lt 20 ] && [ ! -S /data/docker/containerd/containerd.sock ]; do sleep 1; i=$((i+1)); done
-  dockerd --config-file=/data/docker/daemon.json > "$MODDIR/dockerd.log" 2>&1 &
+  while [ "$i" -lt 20 ] && [ ! -S /data/docker/run/containerd/containerd.sock ]; do sleep 1; i=$((i+1)); done
+  dockerd --config-file=/data/docker/conf/daemon.json > "$MODDIR/dockerd.log" 2>&1 &
   sleep 5
   chmod 666 /data/docker/run/docker.sock 2>/dev/null
-  echo "$(date '+%m-%d %H:%M:%S') containerd(${i}s) / dockerd 已拉起" >> "$LOG"
 ) &
 
 exit 0
 EOF
 
 cat > "$BUILD/$MODID/uninstall.sh" <<'EOF'
-#!/system/bin/sh
 CONF=/data/adb/lkm4ctr-docker/docker.conf
 REMOVE_DATA_ON_UNINSTALL=0
 [ -f "$CONF" ] && . "$CONF"
@@ -199,7 +195,7 @@ pkill -f dockerd 2>/dev/null
 pkill -f containerd-shim-runc-v2 2>/dev/null
 pkill -f 'containerd --config' 2>/dev/null
 sleep 1
-[ "$REMOVE_DATA_ON_UNINSTALL" = "1" ] && rm -rf /data/docker /data/container /data/adb/lkm4ctr-docker
+[ "$REMOVE_DATA_ON_UNINSTALL" = "1" ] && rm -rf /data/docker /data/adb/lkm4ctr-docker
 exit 0
 EOF
 
@@ -222,7 +218,7 @@ START_DOCKER=1
 PROXY=${PROXY_DEFAULT}
 # 内核模块不写死文件名：运行时用 uname -r 识别 KMI，
 # 自动拼出 lkm4ctr-<KMI>-arm64.ko，找不到就去 Release 下载同名文件
-# 卸载模块时是否连 /data/docker 与 /data/container 一起删
+# 卸载模块时是否连 /data/docker 一起删
 REMOVE_DATA_ON_UNINSTALL=0
 EOF
 
@@ -233,7 +229,7 @@ cat > "$BUILD/$MODID/conf/daemon.json" <<'EOF'
   "exec-root": "/data/docker/run/docker",
   "pidfile": "/data/docker/run/docker.pid",
   "hosts": ["unix:///data/docker/run/docker.sock"],
-  "containerd": "/data/docker/containerd/containerd.sock",
+  "containerd": "/data/docker/run/containerd/containerd.sock",
 
   "bridge": "none",
   "iptables": false,
@@ -263,10 +259,10 @@ EOF
 cat > "$BUILD/$MODID/conf/containerd.toml" <<'EOF'
 version = 3
 root  = "/data/docker/containerd/root"
-state = "/data/docker/containerd/state"
+state = "/data/docker/run/containerd"
 
 [grpc]
-  address = "/data/docker/containerd/containerd.sock"
+  address = "/data/docker/run/containerd/containerd.sock"
 EOF
 
 mkdir -p "$BUILD/$MODID/system/etc"
@@ -301,8 +297,8 @@ set_perm "$MODPATH/post-fs-data.sh" 0 0 0755
 set_perm "$MODPATH/service.sh"      0 0 0755
 set_perm "$MODPATH/uninstall.sh"    0 0 0755
 
-mkdir -p /data/adb/lkm4ctr-docker/ko /data/docker/containerd/root /data/docker/containerd/state \
-         /data/docker/run/docker /data/docker/plugin /data/container
+mkdir -p /data/adb/lkm4ctr-docker/ko /data/docker/containerd/root /data/docker/run/containerd \
+         /data/docker/conf/containerd /data/docker/run/docker /data/docker/plugin
 
 if [ ! -f /data/adb/lkm4ctr-docker/docker.conf ]; then
   cp -f "$MODPATH/conf/docker.conf" /data/adb/lkm4ctr-docker/docker.conf
@@ -348,7 +344,6 @@ if [ -n "$RUN_KMI" ]; then
 fi
 
 ui_print "- 安装完成，重启生效"
-ui_print "- 开机自动加载内核模块: 把 LOAD_KO 改成 1"
 ui_print " "
 EOF
 
