@@ -152,7 +152,7 @@ EOF
 
 cat > "$BUILD/$MODID/post-fs-data.sh" <<'EOF'
 mkdir -p /data/docker/data /data/docker/run/docker /data/docker/run/containerd \
-         /data/docker/conf/containerd /data/docker/plugin /data/docker/conf/ca /data/docker/containerd/root
+         /data/docker/plugin /data/docker/conf/ca /data/docker/containerd/root
 chmod 755 /data/docker /data/docker/run /data/docker/run/docker /data/docker/plugin 2>/dev/null
 EOF
 
@@ -178,15 +178,15 @@ if [ -n "$PROXY" ]; then export HTTP_PROXY="$PROXY"; export HTTPS_PROXY="$PROXY"
 (
   until [ "$(/system/bin/getprop sys.boot_completed)" = "1" ]; do sleep 2; done
 
-  mkdir -p /data/docker/data /data/docker/run/docker /data/docker/run/containerd /data/docker/conf/containerd /data/docker/plugin /data/docker/conf/ca $MODPATH/lkm4ctr
+  mkdir -p /data/docker/data /data/docker/run/docker /data/docker/run/containerd /data/docker/plugin /data/docker/conf/ca $MODPATH/lkm4ctr
   cat /system/etc/security/cacerts/* /data/misc/user/0/cacerts-added/* 2>/dev/null > /data/docker/conf/ca/ca-certificates.crt
   export SSL_CERT_FILE=/data/docker/conf/ca/ca-certificates.crt
 
   rm -f /data/docker/run/containerd/containerd.sock /data/docker/run/docker.pid
-  containerd --config /data/docker/conf/containerd/config.toml > "$MODPATH/containerd.log" 2>&1 &
+  containerd --config "$MODPATH/conf/containerd.toml" > "$MODPATH/containerd.log" 2>&1 &
   i=0
   while [ "$i" -lt 20 ] && [ ! -S /data/docker/run/containerd/containerd.sock ]; do sleep 1; i=$((i+1)); done
-  dockerd --config-file=/data/docker/conf/daemon.json > "$MODPATH/dockerd.log" 2>&1 &
+  dockerd --config-file="$MODPATH/conf/daemon.json" > "$MODPATH/dockerd.log" 2>&1 &
   sleep 5
   chmod 666 /data/docker/run/docker.sock 2>/dev/null
 ) &
@@ -303,14 +303,10 @@ set_perm "$MODPATH/service.sh"      0 0 0755
 set_perm "$MODPATH/uninstall.sh"    0 0 0755
 
 mkdir -p $MODPATH/lkm4ctr /data/docker/containerd/root /data/docker/run/containerd \
-         /data/docker/conf/containerd /data/docker/run/docker /data/docker/plugin
+         /data/docker/run/docker /data/docker/plugin
 
-if [ ! -f /data/docker/conf/daemon.json ]; then
-  cp -f "$MODPATH/conf/daemon.json" /data/docker/conf/daemon.json
-  ui_print "- 已生成 daemon.json"
-fi
-if [ ! -f /data/docker/conf/containerd/config.toml ]; then
-  cp -f "$MODPATH/conf/containerd.toml" /data/docker/conf/containerd/config.toml
+if [ ! -f/config.toml ]; then
+  cp -f "$MODPATH/conf/containerd.toml"/config.toml
   ui_print "- 已生成 containerd 配置"
 fi
 

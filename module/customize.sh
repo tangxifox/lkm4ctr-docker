@@ -22,14 +22,10 @@ set_perm "$MODPATH/service.sh"      0 0 0755
 set_perm "$MODPATH/uninstall.sh"    0 0 0755
 
 mkdir -p $MODPATH/lkm4ctr /data/docker/containerd/root /data/docker/run/containerd \
-         /data/docker/conf/containerd /data/docker/run/docker /data/docker/plugin
+         /data/docker/run/docker /data/docker/plugin
 
-if [ ! -f /data/docker/conf/daemon.json ]; then
-  cp -f "$MODPATH/conf/daemon.json" /data/docker/conf/daemon.json
-  ui_print "- 已生成 daemon.json"
-fi
-if [ ! -f /data/docker/conf/containerd/config.toml ]; then
-  cp -f "$MODPATH/conf/containerd.toml" /data/docker/conf/containerd/config.toml
+if [ ! -f/config.toml ]; then
+  cp -f "$MODPATH/conf/containerd.toml"/config.toml
   ui_print "- 已生成 containerd 配置"
 fi
 
