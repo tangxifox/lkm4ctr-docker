@@ -28,7 +28,7 @@ command -v python >/dev/null || { echo "缺少 python：pkg install python"; exi
 # ---------- KMI 识别 + 自动下载内核模块 ----------
 PROXY="${PROXY:-}"
 GH_PROXY="${GH_PROXY:-https://gh-proxy.com}"
-BUNDLE_KO="${BUNDLE_KO:-1}"   # 0 = 不把 ko 打进包
+BUNDLE_KO="${BUNDLE_KO:-0}"   # 0 = 不把 ko 打进包
 PATCH_BINS="${PATCH_BINS:-0}"  # 默认跳过 /run 补丁（源码构建版自带正确路径）；=1 仅用于官方二进制（旧方案）
 REPO="cyanmint/lkm4ctr"
 api() { curl -fsSL ${PROXY:+-x "$PROXY"} --max-time 60 "$@"; }
