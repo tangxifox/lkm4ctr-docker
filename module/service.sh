@@ -1,14 +1,12 @@
 #!/system/bin/sh
+export PATH=/system/bin:/system/xbin:/data/adb/magisk:$PATH
 MODDIR=${0%/*}
 
 CONF=/data/adb/lkm4ctr-docker/docker.conf
 [ -f "$CONF" ] && . "$CONF"
 
 if [ "${LOAD_KO:-1}" = "1" ] && [ "$(grep -c '^lkm4ctr ' /proc/modules)" = "0" ]; then
-  KMITAG=$(uname -r | grep -oE 'android[0-9]+')
-  KMAJ=$(uname -r | sed -nE 's/^([0-9]+\.[0-9]+)\..*/\1/p')
-  KO=/data/adb/lkm4ctr-docker/ko/lkm4ctr-${KMITAG}-${KMAJ}-arm64.ko
-  [ -f "$KO" ] && insmod "$KO"
+  insmod /data/adb/lkm4ctr-docker/ko/lkm4ctr.ko
 fi
 
 [ "${START_DOCKER:-1}" = "1" ] || exit 0
