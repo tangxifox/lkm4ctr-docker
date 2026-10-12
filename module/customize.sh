@@ -21,7 +21,7 @@ set_perm "$MODPATH/post-fs-data.sh" 0 0 0755
 set_perm "$MODPATH/service.sh"      0 0 0755
 set_perm "$MODPATH/uninstall.sh"    0 0 0755
 
-mkdir -p /data/adb/lkm4ctr-docker/ko /data/docker/containerd/root /data/docker/run/containerd \
+mkdir -p $MODPATH/lkm4ctr /data/docker/containerd/root /data/docker/run/containerd \
          /data/docker/conf/containerd /data/docker/run/docker /data/docker/plugin
 
 if [ ! -f /data/adb/lkm4ctr-docker/docker.conf ]; then
@@ -40,7 +40,7 @@ fi
 
 if [ -n "$RUN_KMI" ]; then
   NAME="lkm4ctr-${RUN_KMI}-arm64.ko"
-  if [ -f "/data/adb/lkm4ctr-docker/ko/$NAME" ]; then
+  if [ -f "$MODPATH/lkm4ctr/$NAME" ]; then
     ui_print "- 内核模块: 已包含 $NAME"
   else
     ui_print "- 内核模块: 下载 $NAME"
@@ -52,11 +52,11 @@ if [ -n "$RUN_KMI" ]; then
       [ -n "$KO_TAG" ] || KO_TAG=$(curl $PX -fsSL --max-time 20 "${GH_PROXY}/https://api.github.com/repos/$KO_REPO/releases/latest" 2>/dev/null | grep -m1 '"tag_name"' | sed -E 's/.*"tag_name" *: *"([^"]+)".*/\1/')
       mkdir -p "$MODPATH/lkm4ctr"
       for u in "${GH_PROXY}/https://github.com/$KO_REPO/releases/download/$KO_TAG/$NAME" "${GH_PROXY}/https://github.com/$KO_REPO/releases/latest/download/$NAME"; do
-        curl $PX -fsSL -L --max-time 180 -o "/data/adb/lkm4ctr-docker/ko/$NAME" "$u" 2>/dev/null || continue
-        [ "$(stat -c%s "/data/adb/lkm4ctr-docker/ko/$NAME" 2>/dev/null || echo 0)" -gt 100000 ] && break
-        rm -f "/data/adb/lkm4ctr-docker/ko/$NAME"
+        curl $PX -fsSL -L --max-time 180 -o "$MODPATH/lkm4ctr/$NAME" "$u" 2>/dev/null || continue
+        [ "$(stat -c%s "$MODPATH/lkm4ctr/$NAME" 2>/dev/null || echo 0)" -gt 100000 ] && break
+        rm -f "$MODPATH/lkm4ctr/$NAME"
       done
-      if [ -f "/data/adb/lkm4ctr-docker/ko/$NAME" ]; then
+      if [ -f "$MODPATH/lkm4ctr/$NAME" ]; then
         ui_print "- 内核模块: 下载完成"
       else
         ui_print "! 内核模块下载失败"
