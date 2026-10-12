@@ -22,8 +22,8 @@ set_perm "$MODPATH/post-fs-data.sh" 0 0 0755
 set_perm "$MODPATH/service.sh"      0 0 0755
 set_perm "$MODPATH/uninstall.sh"    0 0 0755
 
-mkdir -p /data/adb/lkm4ctr-docker/ko /data/docker/containerd/root /data/docker/containerd/state \
-         /data/docker/run/docker /data/docker/plugin /data/container
+mkdir -p /data/adb/lkm4ctr-docker/ko /data/docker/containerd/root /data/docker/run/containerd \
+         /data/docker/conf/containerd /data/docker/run/docker /data/docker/plugin
 
 if [ ! -f /data/adb/lkm4ctr-docker/docker.conf ]; then
   cp -f "$MODPATH/conf/docker.conf" /data/adb/lkm4ctr-docker/docker.conf
