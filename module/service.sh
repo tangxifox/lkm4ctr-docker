@@ -1,7 +1,6 @@
 #!/system/bin/sh
 export PATH=/system/bin:/system/xbin:/data/adb/magisk:$PATH
 MODDIR=${0%/*}
-MODPATH=${0%/*}
 
 MODPATH=${0%/*}
 CONF=$MODPATH/conf/docker.conf
@@ -20,7 +19,7 @@ if [ -n "$PROXY" ]; then export HTTP_PROXY="$PROXY"; export HTTPS_PROXY="$PROXY"
 (
   until [ "$(/system/bin/getprop sys.boot_completed)" = "1" ]; do sleep 2; done
 
-  mkdir -p /data/docker/data /data/docker/run/docker /data/docker/run/containerd /data/docker/conf/containerd /data/docker/plugin /data/docker/conf/ca $MODPATH/lkm4ctr /data/docker/logs
+  mkdir -p /data/docker/data /data/docker/run/docker /data/docker/run/containerd /data/docker/conf/containerd /data/docker/plugin /data/docker/conf/ca $MODPATH/lkm4ctr
   cat /system/etc/security/cacerts/* /data/misc/user/0/cacerts-added/* 2>/dev/null > /data/docker/conf/ca/ca-certificates.crt
   export SSL_CERT_FILE=/data/docker/conf/ca/ca-certificates.crt
 

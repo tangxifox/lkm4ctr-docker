@@ -1,3 +1,4 @@
+MODPATH=${0%/*}
 CONF=$MODPATH/conf/docker.conf
 REMOVE_DATA_ON_UNINSTALL=0
 [ -f "$CONF" ] && . "$CONF"
