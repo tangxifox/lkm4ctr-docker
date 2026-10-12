@@ -17,7 +17,7 @@ OUT="$HOME/${MODID}.zip"
 PROXY_DEFAULT=""
 
 echo "==> 1. 检查依赖"
-BINS="docker dockerd containerd containerd-shim-runc-v2 ctr runc docker-init docker-proxy fuse-overlayfs"
+BINS="docker dockerd containerd containerd-shim-runc-v2 ctr runc docker-init docker-proxy fuse-overlayfs docker-compose"
 for b in $BINS; do
   [ -x "$BIN/$b" ] || { echo "缺少 $BIN/$b（不设兜底，必须齐）"; exit 1; }
   echo "    ok  $b"
@@ -90,7 +90,7 @@ fi
 echo "==> 4. 建目录并复制二进制"
 rm -rf "$BUILD"; mkdir -p "$BUILD/$MODID"/{system/bin,conf,lkm4ctr}
 
-cp "$BIN/docker"                     "$BUILD/$MODID/system/bin/docker-real"
+cp "$BIN/docker"                     "$BUILD/$MODID/system/bin/docker"
 cp "$BIN/dockerd"                    "$BUILD/$MODID/system/bin/dockerd"
 cp "$BIN/containerd"                 "$BUILD/$MODID/system/bin/containerd"
 cp "$BIN/containerd-shim-runc-v2"    "$BUILD/$MODID/system/bin/containerd-shim-runc-v2"
@@ -99,6 +99,7 @@ cp "$BIN/runc"                       "$BUILD/$MODID/system/bin/runc"
 cp "$BIN/docker-init"                "$BUILD/$MODID/system/bin/docker-init"
 cp "$BIN/docker-proxy"               "$BUILD/$MODID/system/bin/docker-proxy"
 cp "$BIN/fuse-overlayfs"        "$BUILD/$MODID/system/bin/fuse-overlayfs"
+cp "$BIN/docker-compose"            "$BUILD/$MODID/system/bin/docker-compose"
 [ "$BUNDLE_KO" = "1" ] && [ -n "$KO_SRC" ] && cp "$KO_SRC" "$BUILD/$MODID/lkm4ctr/$KO_NAME"
 [ "$BUNDLE_KO" = "1" ] && [ -n "$CHECKER_SRC" ] && cp "$CHECKER_SRC" "$BUILD/$MODID/lkm4ctr/lkm4ctr_checker-arm64"
 chmod 0755 "$BUILD/$MODID/system/bin/"*
@@ -112,7 +113,7 @@ import os, sys, hashlib
 d = sys.argv[1]
 PATCHES = [(b'/run/docker/plugins', b'/data/docker/plugin'),   # 19 = 19
            (b'/run/containerd',    b'/data/container')]         # 15 = 15（旧方案，仅 PATCH_BINS=1 时生效）
-targets = ['dockerd', 'containerd', 'containerd-shim-runc-v2', 'docker-real']
+targets = ['dockerd', 'containerd', 'containerd-shim-runc-v2', 'docker']
 for t in targets:
     p = os.path.join(d, t)
     if not os.path.exists(p):
@@ -135,13 +136,6 @@ fi
 
 echo "==> 6. 写入模块脚本"
 
-cat > "$BUILD/$MODID/system/bin/docker" <<'EOF'
-#!/system/bin/sh
-# 官方 docker CLI 入口包装：自动指向本模块的 socket
-: "${DOCKER_HOST:=unix:///data/docker/run/docker.sock}"
-export DOCKER_HOST
-exec /system/bin/docker-real "$@"
-EOF
 
 cat > "$BUILD/$MODID/module.prop" <<EOF
 id=${MODID}
@@ -158,7 +152,7 @@ EOF
 
 cat > "$BUILD/$MODID/post-fs-data.sh" <<'EOF'
 mkdir -p /data/docker/data /data/docker/run/docker /data/docker/run/containerd \
-         /data/docker/conf/containerd /data/docker/plugin /data/docker/ca /data/docker/containerd/root
+         /data/docker/conf/containerd /data/docker/plugin /data/docker/conf/ca /data/docker/containerd/root
 chmod 755 /data/docker /data/docker/run /data/docker/run/docker /data/docker/plugin 2>/dev/null
 EOF
 
@@ -171,9 +165,9 @@ MODDIR=${0%/*}
 (
   until [ "$(/system/bin/getprop sys.boot_completed)" = "1" ]; do sleep 2; done
 
-  mkdir -p /data/docker/data /data/docker/run/docker /data/docker/run/containerd /data/docker/conf/containerd /data/docker/plugin /data/docker/ca
-  cat /system/etc/security/cacerts/* /data/misc/user/0/cacerts-added/* 2>/dev/null > /data/docker/ca/ca-certificates.crt
-  export SSL_CERT_FILE=/data/docker/ca/ca-certificates.crt
+  mkdir -p /data/docker/data /data/docker/run/docker /data/docker/run/containerd /data/docker/conf/containerd /data/docker/plugin /data/docker/conf/ca
+  cat /system/etc/security/cacerts/* /data/misc/user/0/cacerts-added/* 2>/dev/null > /data/docker/conf/ca/ca-certificates.crt
+  export SSL_CERT_FILE=/data/docker/conf/ca/ca-certificates.crt
 
   rm -f /data/docker/run/containerd/containerd.sock /data/docker/run/docker.pid
   containerd --config /data/docker/conf/containerd/config.toml > "$MODDIR/containerd.log" 2>&1 &
@@ -249,7 +243,7 @@ cat > "$BUILD/$MODID/conf/daemon.json" <<'EOF'
   "log-opts": { "max-size": "10m", "max-file": "3" },
 
   "registry-mirrors": ["https://gh-proxy.org/docker"],
-  "dns": ["223.5.5.5", "8.8.8.8", "1.1.1.1"],
+  "dns": ["223.5.5.5", "119.29.29.29", "8.8.8.8"],
   "default-ulimits": {
     "nofile": { "Name": "nofile", "Soft": 65536, "Hard": 65536 }
   }
@@ -265,8 +259,7 @@ state = "/data/docker/run/containerd"
   address = "/data/docker/run/containerd/containerd.sock"
 EOF
 
-mkdir -p "$BUILD/$MODID/system/etc"
-cat > "$BUILD/$MODID/system/etc/resolv.conf" <<'EOF'
+cat > "$BUILD/$MODID/conf/resolv.conf" <<'EOF'
 nameserver 223.5.5.5
 nameserver 119.29.29.29
 nameserver 8.8.8.8
@@ -292,7 +285,6 @@ ui_print "- 内核: $(uname -r)"
 set_perm_recursive "$MODPATH/system/bin" 0 0 0755 0755
 set_perm_recursive "$MODPATH/conf" 0 0 0755 0644
 set_perm_recursive "$MODPATH/lkm4ctr" 0 0 0755 0644
-set_perm "$MODPATH/system/etc/resolv.conf" 0 0 0644
 set_perm "$MODPATH/post-fs-data.sh" 0 0 0755
 set_perm "$MODPATH/service.sh"      0 0 0755
 set_perm "$MODPATH/uninstall.sh"    0 0 0755
