@@ -24,11 +24,6 @@ set_perm "$MODPATH/uninstall.sh"    0 0 0755
 mkdir -p $MODPATH/lkm4ctr /data/docker/containerd/root /data/docker/run/containerd \
          /data/docker/conf/containerd /data/docker/run/docker /data/docker/plugin
 
-if [ ! -f /data/adb/lkm4ctr-docker/docker.conf ]; then
-  cp -f "$MODPATH/conf/docker.conf" /data/adb/lkm4ctr-docker/docker.conf
-  chmod 0644 /data/adb/lkm4ctr-docker/docker.conf
-  ui_print "- 已生成开关配置 docker.conf"
-fi
 if [ ! -f /data/docker/conf/daemon.json ]; then
   cp -f "$MODPATH/conf/daemon.json" /data/docker/conf/daemon.json
   ui_print "- 已生成 daemon.json"
@@ -45,7 +40,7 @@ if [ -n "$RUN_KMI" ]; then
   else
     ui_print "- 内核模块: 下载 $NAME"
     KO_REPO=cyanmint/lkm4ctr; KO_TAG=""; KO_PROXY=""; GH_PROXY="https://gh-proxy.com"
-    [ -f /data/adb/lkm4ctr-docker/docker.conf ] && . /data/adb/lkm4ctr-docker/docker.conf
+    [ -f $MODPATH/conf/docker.conf ] && . $MODPATH/conf/docker.conf
     if command -v curl >/dev/null 2>&1; then
       PX=""
       [ -n "$KO_PROXY" ] && PX="-x $KO_PROXY"

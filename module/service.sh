@@ -3,7 +3,8 @@ export PATH=/system/bin:/system/xbin:/data/adb/magisk:$PATH
 MODDIR=${0%/*}
 MODPATH=${0%/*}
 
-CONF=/data/adb/lkm4ctr-docker/docker.conf
+MODPATH=${0%/*}
+CONF=$MODPATH/conf/docker.conf
 [ -f "$CONF" ] && . "$CONF"
 
 if [ "${LOAD_KO:-1}" = "1" ] && [ "$(grep -c '^lkm4ctr ' /proc/modules)" = "0" ]; then
